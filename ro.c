@@ -3,14 +3,39 @@
 #include "ro.h"
 #include "db.h"
 
+typedef struct fileDesc{
+    FILE * file;
+    char * file_name;
+    UINT oid;
+}* FileDesc;
+
+typedef struct _ref
+{
+    // INT8 *buffer;
+    FileDesc *files;
+
+} Rel;
+
+Rel *rel = NULL;
+
+
 void init(){
     // do some initialization here.
 
     // example to get the Conf pointer
-    // Conf* cf = get_conf();
+    Conf* cf = get_conf();
+    rel = malloc(sizeof(Rel)); 
+
+    rel->files = malloc(sizeof (FileDesc) * cf->file_limit);
+    for(int i=0;i<cf->file_limit;i++){
+        rel->files[i] = malloc(sizeof(struct fileDesc));
+        rel->files[i]->file = NULL;
+        rel->files[i]->file_name = NULL;
+        rel->files[i]->oid = -1;
+    }
 
     // example to get the Database pointer
-    // Database* db = get_db();
+    Database* db = get_db();
     
     printf("init() is invoked.\n");
 }
@@ -19,6 +44,17 @@ void release(){
     // optional
     // do some end tasks here.
     // free space to avoid memory leak
+
+    Conf* cf = get_conf();
+
+    for(int i=0; i<cf->file_limit;i++){
+        if(rel->files[i]->file != NULL){
+            fclose(rel->files[i]->file);
+        }
+        free(rel->files[i]);
+    }
+
+    free(rel);
     printf("release() is invoked.\n");
 }
 
