@@ -2,7 +2,7 @@
 
 CC=gcc
 CFLAGS=-std=gnu99 -Wall -g
-OBJS=main.o ro.o db.o
+OBJS=main.o ro.o db.o bufpool.o
 BINS=main
 
 main: $(OBJS)
@@ -13,6 +13,8 @@ main.o: ro.h db.h
 ro.o: ro.h db.h
 
 db.o: db.h
+
+bufpool.o: bufpool.h bufpool.c
 
 clean:
 	rm -f $(BINS) *.o
