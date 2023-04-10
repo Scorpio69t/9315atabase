@@ -29,27 +29,21 @@ char *pageInBuf(BufPool pool, int slot)
 		return pname;
 }
 
-// pageInPool(BufPool pool, char rel, int page)
-// - check whether page from rel is already in the pool
-// - returns the slot containing this page, else returns -1
-
 static
-int pageInPool(BufPool pool, char *rel, int page)
-{
-	int i;  char id[MAXID];
-	sprintf(id,"%s%d",rel,page);
-	for (i = 0; i < pool->nbufs; i++) {
-		if (strcmp(id,pool->bufs[i].id) == 0) {
-			return i;
-		}
+void freePageBuffer(BufPool pool, char * rel, int page){
+	// pin == 0	 free page buffer and add it to freelist
+	int pidx = pageInPool(pool,rel,page);
+	if(pidx < 0 ) return;
+	if(pool->bufs[pidx].data!=NULL){
+		free(pool->bufs[pidx]);
+		memset(pool->bufs->id, '\0' , MAXID);
+		pool->bufs[pidx].dirty=0;
+		pool->bufs[pidx].pin=0;
 	}
-	return -1;
-}
 
-// removeFirstFree(pool)
-// - use the first slot on the free list
-// - the slot is removed from the free list
-//   by moving all later elements down
+	assert(pool->nfree>0 && pool->nfree<pool->nbufs);
+	pool->freeList[pool->nfree];
+}
 
 static
 int removeFirstFree(BufPool pool)
@@ -63,27 +57,21 @@ int removeFirstFree(BufPool pool)
 	return v;
 }
 
-// removeFromUsedList(pool,slot)
-// - search for a slot in the usedList and remove it
-// - depends on how usedList managed, so is strategy-dependent
+// pageInPool(BufPool pool, char rel, int page)
+// - check whether page from rel is already in the pool
+// - returns the slot containing this page, else returns -1
 
-static
-void removeFromUsedList(BufPool pool, int slot)
+int pageInPool(BufPool pool, char *rel, int page)
 {
-	// int i, j;
-	switch (pool->strategy) {
-	case 'L':
-		// remove from LRU usedList 
-		break;
-	case 'M':
-		// remove from MRU usedList
-		break;
-	case 'C':
-		// remove from cycled usedList
-		// for clock we don't actually need to maintain a usedList
-		// nothing to do
-		break;
+	int i;  char id[MAXID];
+	sprintf(id,"%s%d",rel,page);
+	fprintf(stderr,"Buffer Pool : check table %s page %d\n",rel,page);
+	for (i = 0; i < pool->nbufs; i++) {
+		if (strcmp(id,pool->bufs[i].id) == 0) {
+			return i;
+		}
 	}
+	return -1;
 }
 
 // getNextSlot(pool)
@@ -96,7 +84,7 @@ void removeFromUsedList(BufPool pool, int slot)
 static
 int grabNextSlot(BufPool pool)
 {
-	int slot;
+	int slot = -1;
 	switch (pool->strategy) {
 	case 'L':
 		// get least recently used slot from used list
@@ -130,28 +118,6 @@ int grabNextSlot(BufPool pool)
 }
 
 
-// makeAvailable(pool,slot)
-// - add the specified slot to the used list
-// - where to add depends on strategy
-
-static
-void makeAvailable(BufPool pool, int slot)
-{
-	switch (pool->strategy) {
-	case 'L':
-		// slot become most recently used
-		break;
-	case 'M':
-		// slot become most recently used
-		break;
-	case 'C':
-		// slot becomes available
-		// nothig to do
-		break;
-	}
-}
-
-
 // Interface Functions
 
 
@@ -172,12 +138,10 @@ BufPool initBufPool(int nbufs, char strategy)
 	newPool->nreleases = 0;
 	newPool->nreads = 0;
 	newPool->nwrites = 0;
-	newPool->nfree = nbufs;
-	newPool->nused = 0;
+	newPool->nfree = nbufs; // all solts are free
 	newPool->freeList = malloc(nbufs * sizeof(int));
 	assert(newPool->freeList != NULL);
-	newPool->usedList = malloc(nbufs * sizeof(int));
-	assert(newPool->usedList != NULL);
+	newPool->nused = 0;
 	newPool->bufs = malloc(nbufs * sizeof(struct buffer));
 	assert(newPool->bufs != NULL);
 
@@ -186,22 +150,18 @@ BufPool initBufPool(int nbufs, char strategy)
 		newPool->bufs[i].id[0] = '\0';
 		newPool->bufs[i].pin = 0;
 		newPool->bufs[i].dirty = 0;
+		newPool->bufs[i].data=NULL;
 		newPool->freeList[i] = i;
-		newPool->usedList[i] = -1;
 	}
 	return newPool;
 }
 
 void releaseBufpool(BufPool pool){
-	// release freeList
-	if(pool->freeList != NULL){
+	// release free list
+	if(pool->freeList!=NULL){
 		free(pool->freeList);
 	}
-	// release usedList
-	if(pool->usedList!=NULL){
-		free(pool->usedList);
-	}
-	// release pages
+	// release pages buffer
 	for(int i=0; i<pool->nbufs; i++){
 		if(pool->bufs[i].data != NULL){
 			free(pool->bufs[i].data);
@@ -214,7 +174,7 @@ void releaseBufpool(BufPool pool){
 
 	// finally release buffer pool
 	free(pool);
-	printf("releaseBufpool() invoked!\n");
+	printf("releaseBufpool() is invoked!\n");
 }
 
 // request a page

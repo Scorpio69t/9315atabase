@@ -26,13 +26,13 @@ struct bufPool {
 	int   nwrites;
 	int   *freeList;     // list of completely unused bufs
 	int   nfree;
-	int   *usedList;     // implements replacement strategy
 	int   nused;
 	struct buffer *bufs;
 };
 
 BufPool initBufPool(int, char);
 void    releaseBufpool(BufPool);
+int		pageInPool(BufPool pool, char *rel, int page);
 int     request_page(BufPool, char*, int);
 void    release_page(BufPool, char*, int);
 void    showPoolUsage(BufPool);
