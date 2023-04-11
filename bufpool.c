@@ -29,20 +29,29 @@ char *pageInBuf(BufPool pool, int slot)
 		return pname;
 }
 
+void freeSlot(BufPool pool, int slot){
+	if(pool->bufs[slot].data!=NULL){
+		free(pool->bufs[slot].data);
+		pool->bufs[slot].data=NULL;
+	}
+}
+
 static
 void freePageBuffer(BufPool pool, char * rel, int page){
 	// pin == 0	 free page buffer and add it to freelist
 	int pidx = pageInPool(pool,rel,page);
 	if(pidx < 0 ) return;
 	if(pool->bufs[pidx].data!=NULL){
-		free(pool->bufs[pidx]);
+		free(pool->bufs[pidx].data);
 		memset(pool->bufs->id, '\0' , MAXID);
 		pool->bufs[pidx].dirty=0;
 		pool->bufs[pidx].pin=0;
 	}
 
-	assert(pool->nfree>0 && pool->nfree<pool->nbufs);
-	pool->freeList[pool->nfree];
+	assert(pool->nfree>=0 && pool->nfree < pool->nbufs);
+	int i = pool->nbufs-pool->nfree;
+	pool->freeList[i]=pidx;
+	pool->nfree++;
 }
 
 static
@@ -197,6 +206,7 @@ int request_page(BufPool pool, char* rel, int page)
 			fprintf(stderr, "Failed to find slot for %s%d\n",rel,page);
 			exit(1);
 		}
+		// freeSlot(pool,slot);
 		pool->nreads++;
 		sprintf(pool->bufs[slot].id,"%s%d",rel,page);
 		pool->bufs[slot].pin = 0;
@@ -204,7 +214,7 @@ int request_page(BufPool pool, char* rel, int page)
 	}
 	// have a slot
 	pool->bufs[slot].pin++; // used
-	removeFromUsedList(pool,slot); // update slot state 
+	// removeFromUsedList(pool,slot); // update slot state 
 	showPoolState(pool);  // for debugging
 	return slot;
 }
@@ -217,11 +227,13 @@ void release_page(BufPool pool, char* rel, int page)
 	int i;
 	i = pageInPool(pool,rel,page);
 	assert(i >= 0);
-	// last user of page is about to release
-	if (pool->bufs[i].pin == 1) {
-		makeAvailable(pool, i);
-	}
+	// // last user of page is about to release
+	// if (pool->bufs[i].pin == 1) {
+	// 	makeAvailable(pool, i);
+	// }
 	pool->bufs[i].pin--;
+	if(pool->bufs[i].pin == 0)
+		freePageBuffer(pool,rel,page);
 	showPoolState(pool);  // for debugging
 }
 
@@ -256,10 +268,13 @@ void showPoolState(BufPool pool)
 		printf(" [%02d]%s", j, pageInBuf(pool,j));
 	}
 	printf("\n");
+
+	/**
 	printf("UsedList:");
 	for (i = 0; i < pool->nused; i++) {
 		j = pool->usedList[i];
 		printf(" [%02d]%s", j, pageInBuf(pool,j));
 	}
 	printf("\n");
+	*/
 }

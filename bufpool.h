@@ -37,4 +37,5 @@ int     request_page(BufPool, char*, int);
 void    release_page(BufPool, char*, int);
 void    showPoolUsage(BufPool);
 void    showPoolState(BufPool);
+void freeSlot(BufPool pool, int slot);
 
