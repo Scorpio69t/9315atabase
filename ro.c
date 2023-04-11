@@ -253,6 +253,32 @@ _Table* sel(const UINT idx, const INT cond_val, const char* table_name){
     return result;
 }
 
+static
+void swap(Tuple x, Tuple y, int nattr) {
+    Tuple temp = malloc(sizeof(INT)*nattr);
+    memcpy(temp,x,nattr*sizeof(INT));
+    memcpy(x,y,sizeof(INT)*nattr);
+    memcpy(y,temp,sizeof(INT)*nattr);
+    free(temp)
+}
+
+static
+void bubble_sort(Tuple arr, int len, int idx, int nattr) {
+    int i, j, temp;
+    for (i = 0; i < len - 1; i++)
+        for (j = 0; j < len - 1 - i; j++)
+            if (arr[j] > arr[j + 1]) {
+                swap(arr[i],arr[j],nattr)
+            }
+}
+
+
+static
+_Table* sort_merge(){
+    return NULL;
+
+}
+
 _Table* join(const UINT idx1, const char* table1_name, const UINT idx2, const char* table2_name){
 
     printf("join() is invoked.\n");
