@@ -94,14 +94,6 @@ static
 int grabNextSlot(BufPool pool)
 {
 	int slot = -1;
-	switch (pool->strategy) {
-	case 'L':
-		// get least recently used slot from used list
-		break;
-	case 'M':
-		// get most recently used slot from used list
-		break;
-	case 'C':
 		// get next available according to cycle counter
 		int i = pool->currSlot;
 		while (1)
@@ -114,10 +106,10 @@ int grabNextSlot(BufPool pool)
 				i++;
 			}
 		}
+
 		slot = i%pool->nbufs;
 		
-		break;
-	}
+//		break;
 
 	if (slot >= 0 && pool->bufs[slot].dirty) {
 		pool->nwrites++;
