@@ -95,7 +95,7 @@ int grabNextSlot(BufPool pool)
 {
 	int slot = -1;
 		// get next available according to cycle counter
-		int i = pool->currSlot;
+		int i = 0;
 		while (1)
 		{
 			if (pool->bufs[i % pool->nbufs].pin == 0){
