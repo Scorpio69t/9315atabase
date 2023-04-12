@@ -259,16 +259,17 @@ void swap(Tuple x, Tuple y, int nattr) {
     memcpy(temp,x,nattr*sizeof(INT));
     memcpy(x,y,sizeof(INT)*nattr);
     memcpy(y,temp,sizeof(INT)*nattr);
-    free(temp)
+    free(temp);
 }
 
+/** sort page*/
 static
-void bubble_sort(Tuple arr, int len, int idx, int nattr) {
-    int i, j, temp;
+void bubble_sort_page(Tuple arr, int len, int idx, int nattr) {
+    int i, j;
     for (i = 0; i < len - 1; i++)
         for (j = 0; j < len - 1 - i; j++)
-            if (arr[j] > arr[j + 1]) {
-                swap(arr[i],arr[j],nattr)
+            if (arr[j*nattr+idx] > arr[(j + 1)*nattr+idx]) {
+                swap(arr+i*nattr,arr+j*nattr,nattr);
             }
 }
 
