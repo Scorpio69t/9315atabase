@@ -55,6 +55,16 @@ void init(){
     printf("init() is invoked.\n");
 }
 
+static
+void print_table(_Table* table){
+    for(int i=0; i<table->ntuples;i++){
+        for (UINT j = 0; j < table->nattrs; j++){
+            fprintf(stdout,"%d ", table->tuples[i][j]);
+        }
+        fprintf(stdout,"\n");
+    }
+}
+
 void release(){
     // optional
     // do some end tasks here.
@@ -178,13 +188,15 @@ _Table* sel(const UINT idx, const INT cond_val, const char* table_name){
             // no free slot log file close in evict_fd function
             sidx = evict_fd(rel->files,cf->file_limit);
         }
+        // for file clock 
+        rel->files[sidx]->used = true;
         rel->files[sidx]->file = fopen(table_path,"r");
+        log_open_file(oid);
         strcpy(rel->files[sidx]->file_name,table_path);
         rel->files[sidx]->oid = oid;
-        rel->files[sidx]->used = true;
-        log_open_file(oid);
         ret = sidx;
     }
+    rel->files[ret]->used = true;
     data_file = rel->files[ret]->file;
     // calculate number of tuples per page
     ntuples_per_page = (cf->page_size-sizeof(UINT64))/sizeof(INT)/table.nattrs;
@@ -255,11 +267,30 @@ _Table* sel(const UINT idx, const INT cond_val, const char* table_name){
 
 static
 void swap(Tuple x, Tuple y, int nattr) {
+
     Tuple temp = malloc(sizeof(INT)*nattr);
     memcpy(temp,x,nattr*sizeof(INT));
     memcpy(x,y,sizeof(INT)*nattr);
     memcpy(y,temp,sizeof(INT)*nattr);
     free(temp);
+}
+
+void bubble_sort_table(Tuple arr[], int len, int idx, int nattr)
+{
+	int i, j;
+	bool exchanged = true;
+	
+	for (i=0; exchanged && i<len-1; i++){
+        exchanged = false;
+		for (j=0; j<len-1-i; j++) 
+		{ 
+			if (arr[j][idx] > arr[j+1][idx])
+			{ 
+				swap(arr[j],arr[j+1],nattr);
+				exchanged = true;
+		    }
+       }
+    }
 }
 
 /** sort page*/
@@ -269,16 +300,10 @@ void bubble_sort_page(Tuple arr, int len, int idx, int nattr) {
     for (i = 0; i < len - 1; i++)
         for (j = 0; j < len - 1 - i; j++)
             if (arr[j*nattr+idx] > arr[(j + 1)*nattr+idx]) {
-                swap(arr+i*nattr,arr+j*nattr,nattr);
+                swap(arr+j*nattr,arr+(j+1)*nattr,nattr);
             }
 }
 
-
-static
-_Table* sort_merge(){
-    return NULL;
-
-}
 
 _Table* join(const UINT idx1, const char* table1_name, const UINT idx2, const char* table2_name){
 
@@ -344,14 +369,14 @@ _Table* join(const UINT idx1, const char* table1_name, const UINT idx2, const ch
             sidx = evict_fd(rel->files,cf->file_limit);
         }
         rel->files[sidx]->file = fopen(table1_path,"r");
+        log_open_file(oid1);
         strcpy(rel->files[sidx]->file_name,table1_path);
         rel->files[sidx]->oid = oid1;
-        rel->files[sidx]->used = true;
-        log_open_file(oid1);
         ret1 = sidx;
     }
+
+    rel->files[ret1]->used = true;
     data_file1 = rel->files[ret1]->file;
-    // data_file1 = fopen(table1_path,"r");
 
     // calculate number of tuples per page
     t1_ntuples_per_page = (cf->page_size-sizeof(UINT64))/sizeof(INT)/table1.nattrs;
@@ -375,12 +400,12 @@ _Table* join(const UINT idx1, const char* table1_name, const UINT idx2, const ch
             sidx = evict_fd(rel->files,cf->file_limit);
         }
         rel->files[sidx]->file = fopen(table2_path,"r");
+        log_open_file(oid2);
         strcpy(rel->files[sidx]->file_name,table2_path);
         rel->files[sidx]->oid = oid2;
-        rel->files[sidx]->used = true;
-        log_open_file(oid2);
         ret2 = sidx;
     }
+    rel->files[ret2]->used = true;
     data_file2 = rel->files[ret2]->file;
 
     // calculate number of tuples per page
@@ -513,5 +538,10 @@ _Table* join(const UINT idx1, const char* table1_name, const UINT idx2, const ch
     // bree buffer
     // free(page1);
     // free(page2);
+    // printf("before sort:\n");
+    // print_table(result);
+    bubble_sort_table(result->tuples,result->ntuples,idx1,result->nattrs);
+    // printf("after sort:\n");
+    // print_table(result);
     return result;
 }
